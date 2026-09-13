@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>INALSA - Recorridos de Seguridad</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="INALSA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="../icon.png">
+<link rel="icon" href="../icon.png">
+<style>
+:root{ --bg:#020617; --card:#0f172a; --line:#1e293b; --ok:#059669; --okl:#10b981; --txt:#e2e8f0; --mut:#94a3b8; }
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;padding-bottom:84px}
+.wrap{max-width:640px;margin:0 auto;padding:12px}
+header.top{position:sticky;top:0;z-index:20;background:rgba(2,6,23,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 12px}
+header.top .row{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
+h1{font-size:17px;margin:0}h2{font-size:15px;margin:0 0 10px}p{margin:4px 0}
+.small{font-size:12px}.mut{color:var(--mut)}.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 4px}
+input,select,textarea{width:100%;background:#020617;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:15px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--okl)}
+button{font-family:inherit}
+.btn{width:100%;background:var(--ok);color:#fff;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:700;margin-top:10px}
+.btn.sec{background:#1e293b;color:var(--txt)}
+.btn.dan{background:#e11d48}
+.btn.sky{background:#0284c7}
+.btn:disabled{opacity:.5}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns .btn{width:auto;flex:1;min-width:120px;margin-top:8px;padding:10px;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(2,6,23,.97);border-top:1px solid var(--line);display:flex;overflow-x:auto}
+.tabs button{flex:1;min-width:66px;background:none;border:0;color:var(--mut);padding:8px 4px;font-size:11px;font-weight:700}
+.tabs button .ic{display:block;font-size:19px}
+.tabs button.on{color:var(--okl)}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700;background:#1e293b}
+.badge.ok{background:rgba(5,150,105,.2);color:#34d399}
+.badge.warn{background:rgba(245,158,11,.2);color:#fbbf24}
+.bar{height:8px;background:#1e293b;border-radius:99px;overflow:hidden;margin-top:8px}
+.bar > div{height:100%;background:var(--okl);width:0;transition:width .3s}
+.pt{border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;background:var(--card)}
+.pt.done{border-color:rgba(5,150,105,.6);background:rgba(5,150,105,.08)}
+.num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:9px;background:#1e293b;font-weight:800;font-size:13px;margin-right:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:74px;z-index:60;background:var(--okl);color:#04150f;padding:12px 16px;border-radius:12px;font-weight:700;font-size:14px;max-width:92%;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.toast.err{background:#e11d48;color:#fff}
+.mono-big{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px;font-weight:800;color:#34d399;word-break:break-all}
+a.link{color:#38bdf8;font-weight:700;font-size:13px}
+img.thumb{width:100%;border-radius:12px;border:1px solid var(--line);margin-top:8px}
+.hr{height:1px;background:var(--line);margin:12px 0}
+.center{text-align:center}
+.logo{font-size:44px}
+.rowline{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ol,ul{padding-left:18px;margin:6px 0}
+li{margin-bottom:5px;font-size:13px;color:#cbd5e1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ===================== DATOS (se guardan en el teléfono) ===================== */
+var K={users:'inalsa_users',points:'inalsa_points',map:'inalsa_map',cfg:'inalsa_cfg',rounds:'inalsa_rounds',ses:'inalsa_session'};
+function load(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){toast('Sin espacio para guardar',true);}}
+
+var users=load(K.users,null);
+if(!users){users=[{id:1,username:'007486',password:'j29910088',firstName:'Jean',lastName:'Quero',role:'admin',active:true,phone:''}];save(K.users,users);}
+var points=load(K.points,[]);
+var rounds=load(K.rounds,[]);
+var cfg=load(K.cfg,null);
+// No publiques el token del bot dentro del código. Configúralo desde Telegram en el panel administrador.
+if(!cfg){cfg={botToken:'',chatId:'7812442136',radius:30,site:'INALSA'};save(K.cfg,cfg);}
+var mapImg=load(K.map,'');
+var ses=load(K.ses,null);
+
+var view = ses ? (me() && me().role==='admin' ? 'admin' : 'oficial') : 'login';
+var tab='puntos';
+var detail=null;
+var photos={}, notes={};
+var pos=null, gpsErr='', watchId=null;
+
+function me(){ for(var i=0;i<users.length;i++){ if(users[i].id===ses) return users[i]; } return null; }
+function uid(){ return Date.now()+Math.floor(Math.random()*1000); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ===================== UTILIDADES ===================== */
+function toast(msg,err){
+  var d=document.createElement('div');
+  d.className='toast'+(err?' err':'');
+  d.textContent=msg;
+  document.body.appendChild(d);
+  setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); },4200);
+}
+function distM(a,b,c,d){
+  var R=6371000, rad=function(x){return x*Math.PI/180;};
+  var dLat=rad(c-a), dLon=rad(d-b);
+  var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function fmtLL(lat,lng){ return (Math.round(lat*1e6)/1e6).toFixed(6)+','+(Math.round(lng*1e6)/1e6).toFixed(6); }
+function fmtD(m){ return m<1000 ? Math.round(m)+' m' : (m/1000).toFixed(2)+' km'; }
+function mapsLink(lat,lng){ return 'https://www.google.com/maps/search/?api=1&query='+lat+','+lng; }
+function hora(ts){ return new Date(ts).toLocaleString('es-VE'); }
+function mkLL(a,b){ var la=parseFloat(a), ln=parseFloat(b); if(isNaN(la)||isNaN(ln)||la<-90||la>90||ln<-180||ln>180) return null; return {lat:la,lng:ln}; }
+function parseCoords(t){
+  t=String(t||'').trim(); var m;
+  if((m=t.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/))) return mkLL(m[1],m[2]);
+  if((m=t.match(/[?&](?:q|query|ll|destination)=(-?\d+(?:\.\d+)?)%2C(-?\d+(?:\.\d+)?)/i))) return mkLL(m[1],m[2]);
+  if((m=t.match(/[?&](?:q|query|ll|destination)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i))) return mkLL(m[1],m[2]);
+  if((m=t.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/))) return mkLL(m[1],m[2]);
+  if((m=t.match(/(-?\d+)\.(-?\d{3,})$/)) && m[1].replace('-','').length>7) return mkLL(m[1],'-'+m[2]);
+  if((m=t.match(/(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/))) return mkLL(m[1],m[2]);
+  return null;
+}
+
+/* ===================== TELEGRAM ===================== */
+function tgUrl(m){ return 'https://api.telegram.org/bot'+cfg.botToken+'/'+m; }
+function tgSend(method,params){
+  return new Promise(function(res){
+    if(!cfg.botToken||!cfg.chatId){ res({ok:false,error:'Falta token o chat id'}); return; }
+    var url=tgUrl(method);
+    var body=new URLSearchParams();
+    body.append('chat_id',cfg.chatId);
+    for(var k in params){ body.append(k,params[k]); }
+    try{
+      fetch(url,{method:'POST',body:body}).then(function(r){return r.json();}).then(function(j){
+        res(j&&j.ok?{ok:true}:{ok:false,error:(j&&j.description)||'Error'});
+      }).catch(function(){ beacon(method,params,res); });
+    }catch(e){ beacon(method,params,res); }
+  });
+}
+function beacon(method,params,res){
+  var q='chat_id='+encodeURIComponent(cfg.chatId);
+  for(var k in params){ q+='&'+k+'='+encodeURIComponent(params[k]); }
+  var img=new Image();
+  var done=false;
+  var fin=function(v){ if(done) return; done=true; res({ok:v,error:v?null:'Sin conexión'}); };
+  img.onload=function(){ fin(true); };
+  img.onerror=function(){ fin(false); };
+  img.src=tgUrl(method)+'?'+q;
+  setTimeout(function(){ fin(false); },9000);
+}
+function tgPhoto(dataUrl,caption){
+  return new Promise(function(res){
+    try{
+      var clean=dataUrl.indexOf(',')>-1?dataUrl.split(',').slice(1).join(','):dataUrl;
+      var bin=atob(clean), arr=new Uint8Array(bin.length);
+      for(var i=0;i<bin.length;i++){ arr[i]=bin.charCodeAt(i); }
+      var fd=new FormData();
+      fd.append('chat_id',cfg.chatId);
+      fd.append('caption',caption);
+      fd.append('parse_mode','HTML');
+      fd.append('photo',new Blob([arr],{type:'image/jpeg'}),'punto.jpg');
+      fetch(tgUrl('sendPhoto'),{method:'POST',body:fd}).then(function(r){return r.json();}).then(function(j){ res(!!(j&&j.ok)); }).catch(function(){ res(false); });
+    }catch(e){ res(false); }
+  });
+}
+function proveTelegram(){
+  tgSend('sendMessage',{text:'🤖 <b>INALSA Seguridad</b>\nAplicación HTML conectada con el bot ✅',parse_mode:'HTML'}).then(function(r){
+    toast(r.ok?'Mensaje enviado al bot ✅':'No se pudo enviar: '+(r.error||''),!r.ok);
+  });
+}
+
+/* ===================== GPS ===================== */
+function startGps(){
+  if(watchId!==null) return;
+  if(!navigator.geolocation){ gpsErr='Este dispositivo no tiene GPS'; return; }
+  watchId=navigator.geolocation.watchPosition(function(p){
+    pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy||0,t:p.timestamp};
+    gpsErr=''; live();
+  },function(e){
+    gpsErr = e.code===1 ? 'Permiso de ubicación denegado. Activa el GPS y permite el acceso.' : 'Sin señal de GPS. Sal a un área abierta.';
+    live();
+  },{enableHighAccuracy:true,maximumAge:2000,timeout:25000});
+}
+function useMyLocation(cb){
+  if(!navigator.geolocation){ toast('Sin GPS',true); return; }
+  navigator.geolocation.getCurrentPosition(function(p){ cb(p.coords.latitude,p.coords.longitude); },function(){ toast('No se pudo obtener la ubicación',true); },{enableHighAccuracy:true,timeout:20000});
+}
+
+/* ===================== LOGIN ===================== */
+function login(){
+  var u=document.getElementById('lu').value.trim();
+  var p=document.getElementById('lp').value;
+  for(var i=0;i<users.length;i++){
+    if(users[i].username===u && users[i].password===p){
+      if(!users[i].active){ toast('Usuario desactivado',true); return; }
+      ses=users[i].id; save(K.ses,ses);
+      view = users[i].role==='admin' ? 'admin' : 'oficial';
+      tab='puntos'; startGps(); render(); return;
+    }
+  }
+  toast('Usuario o contraseña incorrectos',true);
+}
+function logout(){ ses=null; save(K.ses,null); view='login'; detail=null; render(); }
+
+/* ===================== RENDER ===================== */
+function render(){
+  var el=document.getElementById('app');
+  if(view==='login'){ el.innerHTML=viewLogin(); }
+  else if(view==='admin'){ el.innerHTML=viewAdmin(); }
+  else { el.innerHTML=viewOficial(); live(); }
+  window.scrollTo(0,0);
+}
+function header(title,sub){
+  var u=me();
+  return '<header class="top"><div class="row"><div><h1>'+esc(title)+'</h1>'+
+    '<p class="small mut">'+esc(sub||(u?u.firstName+' '+u.lastName+' @'+u.username:''))+'</p></div>'+
+    '<div class="btns" style="flex:0 0 auto"><button class="btn sec" style="padding:8px 10px;font-size:12px;width:auto" onclick="logout()">Salir</button></div>'+
+    '</div></header>';
+}
+
+function viewLogin(){
+  return '<div class="wrap"><div class="card center" style="margin-top:40px">'+
+    '<div class="logo">🛡️</div><h1 style="font-size:22px">INALSA</h1>'+
+    '<p class="mut">Control de recorridos de seguridad</p>'+
+    '<label style="text-align:left">Usuario</label>'+
+    '<input id="lu" inputmode="numeric" autocomplete="username" placeholder="007486">'+
+    '<label style="text-align:left">Contraseña</label>'+
+    '<input id="lp" type="password" autocomplete="current-password" placeholder="••••••">'+
+    '<button class="btn" onclick="login()">Ingresar</button>'+
+    '<p class="small mut" style="margin-top:12px">La app guarda los datos en este teléfono y reporta cada punto al bot de Telegram.</p>'+
+    '</div></div>';
+}
+
+/* ===================== ADMIN ===================== */
+var ADMIN_TABS=[['puntos','📍','Puntos'],['usuarios','👥','Usuarios'],['mapa','🗺️','Mapa'],['rondas','🧾','Rondas'],['telegram','✈️','Telegram'],['ayuda','❓','Ayuda']];
+function viewAdmin(){
+  var h=header('Panel administrador');
+  var body='';
+  if(tab==='puntos') body=tabPuntos();
+  else if(tab==='usuarios') body=tabUsuarios();
+  else if(tab==='mapa') body=tabMapa();
+  else if(tab==='rondas') body=tabRondas();
+  else if(tab==='telegram') body=tabTelegram();
+  else body=tabAyuda();
+  var nav='<nav class="tabs">';
+  for(var i=0;i<ADMIN_TABS.length;i++){
+    var t=ADMIN_TABS[i];
+    nav+='<button class="'+(tab===t[0]?'on':'')+'" onclick="setTab(\''+t[0]+'\')"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>';
+  }
+  nav+='<button onclick="goRound()"><span class="ic">🚶</span>Recorrido</button></nav>';
+  return h+'<div class="wrap">'+body+'</div>'+nav;
+}
+function setTab(t){ tab=t; detail=null; render(); }
+function goRound(){ view='oficial'; startGps(); render(); }
+
+/* ---------- PUNTOS ---------- */
+var bulkMode=false;
+function tabPuntos(){
+  var s='<div class="btns" style="margin-bottom:10px">'+
+    '<button class="btn '+(bulkMode?'sec':'')+'" onclick="bulkMode=false;render()">Punto a punto</button>'+
+    '<button class="btn '+(bulkMode?'':'sec')+'" onclick="bulkMode=true;render()">Cargar 1 al 10</button></div>';
+
+  if(bulkMode){
+    s+='<div class="card"><h2>Cargar los 10 puntos del recorrido</h2>'+
+      '<p class="small mut">En cada fila pega las coordenadas de Google Maps: <span class="mono">10.123456,-69.455865</span> o el link completo.</p>';
+    for(var n=1;n<=10;n++){
+      var ex=null; for(var i=0;i<points.length;i++){ if(points[i].number===n) ex=points[i]; }
+      var val = ex ? fmtLL(ex.lat,ex.lng) : '';
+      s+='<div style="display:flex;gap:6px;align-items:center;margin-top:8px">'+
+        '<span class="num">'+n+'</span>'+
+        '<input style="flex:1" placeholder="Nombre" id="bn'+n+'" value="'+esc(ex?ex.name:'')+'">'+
+        '<input style="flex:1.3" class="mono" placeholder="10.123456,-69.455865" id="bc'+n+'" value="'+val+'">'+
+        '</div>';
+    }
+    s+='<button class="btn" onclick="saveBulk()">Guardar todos los puntos</button></div>';
+  }else{
+    var next = points.length ? Math.max.apply(null,points.map(function(p){return p.number;}))+1 : 1;
+    s+='<div class="card"><h2>Añadir punto de control</h2>'+
+      '<label>Pega el link de Google Maps o las coordenadas</label>'+
+      '<div style="display:flex;gap:6px"><input id="paste" placeholder="https://maps.google.com/... ó 10.12,-69.45" oninput="autoCoord(this.value)" style="flex:1">'+
+      '<button class="btn sky" style="width:auto;margin:0;padding:11px;font-size:13px" onclick="fillMyLocation()">Mi ubicación</button></div>'+
+      '<a class="link" target="_blank" href="https://www.google.com/maps">Abrir Google Maps</a>'+
+      '<div class="grid2" style="margin-top:6px">'+
+      '<div><label>Número</label><input id="pn" type="number" value="'+next+'"></div>'+
+      '<div><label>Radio (m)</label><input id="pr" type="number" value="'+cfg.radius+'"></div></div>'+
+      '<label>Nombre del punto</label><input id="pname" placeholder="Portón principal">'+
+      '<div class="grid2"><div><label>Latitud</label><input id="plat" inputmode="decimal"></div>'+
+      '<div><label>Longitud</label><input id="plng" inputmode="decimal"></div></div>'+
+      '<label>Indicación (opcional)</label><input id="pdesc" placeholder="Revisar candado">'+
+      '<button class="btn" onclick="savePoint()">Guardar punto</button></div>';
+  }
+
+  s+='<div class="card"><h2>Puntos configurados ('+points.length+')</h2>';
+  if(!points.length) s+='<p class="small mut">Todavía no hay puntos cargados.</p>';
+  var sorted=points.slice().sort(function(a,b){return a.number-b.number;});
+  for(var j=0;j<sorted.length;j++){
+    var p=sorted[j];
+    s+='<div class="pt" style="margin-bottom:8px">'+
+      '<div class="rowline"><div><b><span class="num">'+p.number+'</span>'+esc(p.name||'')+'</b>'+
+      '<p class="small mut mono">'+fmtLL(p.lat,p.lng)+'</p>'+
+      '<p class="small mut">Radio '+p.radius+' m · '+(p.active?'Activo':'Inactivo')+'</p>'+
+      (p.desc?'<p class="small mut">'+esc(p.desc)+'</p>':'')+'</div>'+
+      '<a class="btn sky" style="width:auto;margin:0;padding:9px 12px;font-size:12px;text-decoration:none" target="_blank" href="'+mapsLink(p.lat,p.lng)+'">Maps</a></div>'+
+      '<div class="btns"><button class="btn sec" onclick="renamePoint('+p.id+')">Renombrar</button>'+
+      '<button class="btn sec" onclick="togglePoint('+p.id+')">'+(p.active?'Desactivar':'Activar')+'</button>'+
+      '<button class="btn dan" onclick="delPoint('+p.id+')">Borrar</button></div></div>';
+  }
+  s+='</div>';
+  return s;
+}
+function autoCoord(v){
+  var c=parseCoords(v);
+  if(c){ document.getElementById('plat').value=c.lat.toFixed(6); document.getElementById('plng').value=c.lng.toFixed(6); }
+}
+function fillMyLocation(){
+  useMyLocation(function(la,ln){
+    document.getElementById('plat').value=la.toFixed(6);
+    document.getElementById('plng').value=ln.toFixed(6);
+    document.getElementById('paste').value=fmtLL(la,ln);
+    toast('Ubicación actual cargada');
+  });
+}
+function savePoint(){
+  var la=parseFloat(document.getElementById('plat').value);
+  var ln=parseFloat(document.getElementById('plng').value);
+  if(isNaN(la)||isNaN(ln)||la<-90||la>90||ln<-180||ln>180){ toast('Coordenadas inválidas',true); return; }
+  var num=parseInt(document.getElementById('pn').value,10)||(points.length+1);
+  for(var i=0;i<points.length;i++){ if(points[i].number===num){ toast('Ya existe el punto #'+num,true); return; } }
+  points.push({id:uid(),number:num,name:document.getElementById('pname').value.trim()||('Punto '+num),
+    desc:document.getElementById('pdesc').value.trim(),lat:la,lng:ln,
+    radius:parseInt(document.getElementById('pr').value,10)||cfg.radius,active:true});
+  save(K.points,points); toast('Punto #'+num+' guardado'); render();
+}
+function saveBulk(){
+  var added=0,updated=0;
+  for(var n=1;n<=10;n++){
+    var nameEl=document.getElementById('bn'+n), cEl=document.getElementById('bc'+n);
+    if(!cEl) continue;
+    var c=parseCoords(cEl.value);
+    if(!c) continue;
+    var name=(nameEl.value||('Punto '+n)).trim();
+    var ex=null; for(var i=0;i<points.length;i++){ if(points[i].number===n) ex=points[i]; }
+    if(ex){ ex.lat=c.lat; ex.lng=c.lng; if(name) ex.name=name; updated++; }
+    else { points.push({id:uid(),number:n,name:name||('Punto '+n),desc:'',lat:c.lat,lng:c.lng,radius:cfg.radius,active:true}); added++; }
+  }
+  save(K.points,points); toast('Guardado. Nuevos: '+added+' · Actualizados: '+updated); render();
+}
+function renamePoint(id){
+  for(var i=0;i<points.length;i++){ if(points[i].id===id){ var n=prompt('Nombre del punto:',points[i].name); if(n!==null){ points[i].name=n; save(K.points,points); render(); } return; } }
+}
+function togglePoint(id){ for(var i=0;i<points.length;i++){ if(points[i].id===id){ points[i].active=!points[i].active; save(K.points,points); render(); return; } } }
+function delPoint(id){
+  if(!confirm('¿Borrar este punto?')) return;
+  points=points.filter(function(p){return p.id!==id;}); save(K.points,points); render();
+}
+
+/* ---------- USUARIOS ---------- */
+function tabUsuarios(){
+  var s='<div class="card"><h2>Añadir usuario</h2>'+
+   '<div class="grid2"><div><label>Nombre</label><input id="un"></div><div><label>Apellido</label><input id="ul"></div></div>'+
+   '<div class="grid2"><div><label>Usuario</label><input id="uu" inputmode="numeric"></div><div><label>Contraseña</label><input id="up"></div></div>'+
+   '<div class="grid2"><div><label>Teléfono</label><input id="ut"></div><div><label>Rol</label><select id="ur"><option value="officer">Oficial</option><option value="admin">Administrador</option></select></div></div>'+
+   '<button class="btn" onclick="addUser()">Crear usuario</button></div>';
+  s+='<div class="card"><h2>Usuarios ('+users.length+')</h2>';
+  for(var i=0;i<users.length;i++){
+    var u=users[i];
+    s+='<div class="pt"><div class="rowline"><div><b>'+esc(u.firstName+' '+u.lastName)+'</b> <span class="mut">@'+esc(u.username)+'</span>'+
+      '<p class="small mut">'+(u.role==='admin'?'🛡️ Administrador':'👮 Oficial')+(u.phone?' · '+esc(u.phone):'')+' · '+(u.active?'Activo':'Inactivo')+'</p></div>'+
+      (u.id===ses?'':'<button class="btn dan" style="width:auto;margin:0;padding:9px 12px;font-size:12px" onclick="delUser('+u.id+')">Borrar</button>')+'</div>'+
+      '<div class="btns"><button class="btn sec" onclick="toggleUser('+u.id+')">'+(u.active?'Desactivar':'Activar')+'</button>'+
+      '<button class="btn sec" onclick="passUser('+u.id+')">Cambiar clave</button>'+
+      '<button class="btn sec" onclick="roleUser('+u.id+')">'+(u.role==='admin'?'Hacer oficial':'Hacer admin')+'</button></div></div>';
+  }
+  s+='</div>';
+  s+='<div class="card"><h2>Respaldo de datos</h2><p class="small mut">Guarda un archivo con usuarios, puntos y recorridos, o restáuralo en otro teléfono.</p>'+
+    '<div class="btns"><button class="btn sec" onclick="exportData()">Exportar respaldo</button>'+
+    '<button class="btn sec" onclick="document.getElementById(\'imp\').click()">Restaurar</button></div>'+
+    '<input type="file" id="imp" accept="application/json" style="display:none" onchange="importData(this)"></div>';
+  return s;
+}
+function addUser(){
+  var u=document.getElementById('uu').value.trim(), p=document.getElementById('up').value.trim();
+  if(!u||!p){ toast('Usuario y contraseña obligatorios',true); return; }
+  for(var i=0;i<users.length;i++){ if(users[i].username===u){ toast('Ese usuario ya existe',true); return; } }
+  users.push({id:uid(),username:u,password:p,firstName:document.getElementById('un').value.trim(),
+    lastName:document.getElementById('ul').value.trim(),phone:document.getElementById('ut').value.trim(),
+    role:document.getElementById('ur').value,active:true});
+  save(K.users,users); toast('Usuario '+u+' creado'); render();
+}
+function delUser(id){ if(!confirm('¿Eliminar este usuario?')) return; users=users.filter(function(u){return u.id!==id;}); save(K.users,users); render(); }
+function toggleUser(id){ for(var i=0;i<users.length;i++){ if(users[i].id===id){ users[i].active=!users[i].active; save(K.users,users); render(); return; } } }
+function passUser(id){ for(var i=0;i<users.length;i++){ if(users[i].id===id){ var p=prompt('Nueva contraseña para '+users[i].username+':'); if(p){ users[i].password=p; save(K.users,users); toast('Contraseña actualizada'); } return; } } }
+function roleUser(id){
+  for(var i=0;i<users.length;i++){ if(users[i].id===id){
+    if(users[i].id===ses){ toast('No puedes cambiar tu propio rol',true); return; }
+    users[i].role = users[i].role==='admin'?'officer':'admin'; save(K.users,users); render(); return; } }
+}
+function exportData(){
+  var data={users:users,points:points,rounds:rounds,cfg:cfg,map:mapImg};
+  var blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='respaldo-inalsa.json'; a.click();
+}
+function importData(input){
+  var f=input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);
+      if(d.users){ users=d.users; save(K.users,users); }
+      if(d.points){ points=d.points; save(K.points,points); }
+      if(d.rounds){ rounds=d.rounds; save(K.rounds,rounds); }
+      if(d.cfg){ cfg=d.cfg; save(K.cfg,cfg); }
+      if(d.map){ mapImg=d.map; save(K.map,mapImg); }
+      toast('Datos restaurados'); render();
+    }catch(e){ toast('Archivo inválido',true); }
+  };
+  r.readAsText(f);
+}
+
+/* ---------- MAPA ---------- */
+function tabMapa(){
+  var s='<div class="card"><h2>Foto / plano del sitio</h2>'+
+    '<p class="small mut">Sube una foto del plano o croquis del recorrido. Solo el administrador puede cambiarla y los oficiales la verán en la pestaña Mapa.</p>'+
+    '<button class="btn sky" onclick="document.getElementById(\'mapi\').click()">📷 Seleccionar o tomar foto</button>'+
+    '<input type="file" id="mapi" accept="image/*" style="display:none" onchange="uploadMap(this)">'+
+    (mapImg?'<button class="btn dan" onclick="delMap()">Quitar mapa</button>':'')+'</div>';
+  s+='<div class="card"><h2>Vista previa</h2>'+(mapImg?'<img class="thumb" src="'+mapImg+'">':'<p class="small mut">No hay plano cargado.</p>')+'</div>';
+  return s;
+}
+function uploadMap(input){
+  var f=input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var sc=Math.min(1,1400/Math.max(img.width,img.height));
+      var c=document.createElement('canvas');
+      c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      mapImg=c.toDataURL('image/jpeg',0.75); save(K.map,mapImg); toast('Plano guardado'); render();
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(f);
+}
+function delMap(){ if(!confirm('¿Quitar el plano?')) return; mapImg=''; save(K.map,''); render(); }
+
+/* ---------- RONDAS ---------- */
+function tabRondas(){
+  if(detail){
+    var r=null; for(var i=0;i<rounds.length;i++){ if(rounds[i].id===detail) r=rounds[i]; }
+    if(!r){ detail=null; return tabRondas(); }
+    var u=null; for(var j=0;j<users.length;j++){ if(users[j].id===r.userId) u=users[j]; }
+    var s='<div class="btns"><button class="btn sec" onclick="detail=null;render()">← Volver</button></div>';
+    s+='<div class="card"><h2>Recorrido #'+r.id+'</h2><p class="small mut">'+esc(u?u.firstName+' '+u.lastName+' @'+u.username:'')+'</p>'+
+      '<p class="small mut">Inicio: '+hora(r.start)+(r.end?' · Fin: '+hora(r.end):' · En curso')+'</p>'+
+      '<p class="small mut">Puntos: '+r.visits.length+' · Posiciones GPS: '+(r.track?r.track.length:0)+'</p>'+
+      '<button class="btn dan" onclick="delRound('+r.id+')">Borrar recorrido</button></div>';
+    for(var k=0;k<r.visits.length;k++){
+      var v=r.visits[k];
+      s+='<div class="pt"><b>#'+v.number+' '+esc(v.name)+'</b>'+
+        '<p class="small mut">'+hora(v.time)+' · a '+Math.round(v.dist)+' m del punto</p>'+
+        '<p class="mono" style="color:#34d399">'+fmtLL(v.lat,v.lng)+'</p>'+
+        (v.note?'<p class="small">📝 '+esc(v.note)+'</p>':'')+
+        '<a class="link" target="_blank" href="'+mapsLink(v.lat,v.lng)+'">Ver en Google Maps</a>'+
+        (v.photo?'<img class="thumb" src="'+v.photo+'">':'')+'</div>';
+    }
+    if(!r.visits.length) s+='<div class="card center"><p class="small mut">Sin puntos registrados.</p></div>';
+    return s;
+  }
+  var s='<div class="card"><h2>Recorridos registrados</h2>';
+  if(!rounds.length) s+='<p class="small mut">Aún no hay recorridos.</p>';
+  var list=rounds.slice().sort(function(a,b){return b.start-a.start;});
+  for(var i2=0;i2<list.length;i2++){
+    var rr=list[i2]; var uu=null;
+    for(var m=0;m<users.length;m++){ if(users[m].id===rr.userId) uu=users[m]; }
+    s+='<div class="pt" onclick="detail='+rr.id+';render()">'+
+      '<div class="rowline"><div><b>'+esc(uu?uu.firstName+' '+uu.lastName:'')+'</b> <span class="mut small">@'+esc(uu?uu.username:'')+'</span>'+
+      '<p class="small mut">'+hora(rr.start)+' · '+rr.visits.length+' puntos</p></div>'+
+      '<span class="badge '+(rr.end?'':'ok')+'">'+(rr.end?'Finalizado':'En curso')+'</span></div></div>';
+  }
+  s+='</div>';
+  return s;
+}
+function delRound(id){ if(!confirm('¿Borrar el recorrido?')) return; rounds=rounds.filter(function(r){return r.id!==id;}); save(K.rounds,rounds); detail=null; render(); }
+
+/* ---------- TELEGRAM ---------- */
+function tabTelegram(){
+  return '<div class="card"><h2>Bot de Telegram</h2>'+
+    '<p class="small mut">Se envía automáticamente el inicio y fin del recorrido, cada punto con su ubicación y la foto de evidencia.</p>'+
+    '<label>Token del bot</label><input id="tgtk" class="mono" value="'+esc(cfg.botToken)+'">'+
+    '<label>Chat ID</label><input id="tgid" class="mono" value="'+esc(cfg.chatId)+'">'+
+    '<label>Radio por defecto (m)</label><input id="tgrad" type="number" value="'+cfg.radius+'">'+
+    '<button class="btn" onclick="saveTg()">Guardar</button>'+
+    '<button class="btn sky" onclick="saveTg(true)">Guardar y enviar prueba</button></div>'+
+    '<div class="card"><h2>¿Cómo sacar el Chat ID de un grupo?</h2>'+
+    '<ol><li>Agrega el bot al grupo.</li><li>Escribe un mensaje en el grupo.</li>'+
+    '<li>Abre: <span class="mono">https://api.telegram.org/bot&lt;TOKEN&gt;/getUpdates</span></li>'+
+    '<li>Busca <span class="mono">chat.id</span> (en grupos empieza por -100).</li></ol></div>';
+}
+function saveTg(test){
+  cfg.botToken=document.getElementById('tgtk').value.trim();
+  cfg.chatId=document.getElementById('tgid').value.trim();
+  cfg.radius=parseInt(document.getElementById('tgrad').value,10)||30;
+  save(K.cfg,cfg);
+  if(test===true) proveTelegram(); else toast('Configuración guardada');
+}
+
+/* ---------- AYUDA ---------- */
+function tabAyuda(){
+  return '<div class="card"><h2>📲 Instalar en el teléfono</h2>'+
+   '<ol><li>Abre esta página en <b>Chrome</b> (Android) o <b>Safari</b> (iPhone).</li>'+
+   '<li>Android: menú ⋮ → <b>Instalar aplicación</b> / <b>Agregar a pantalla de inicio</b>.</li>'+
+   '<li>iPhone: botón <b>Compartir</b> → <b>Agregar a pantalla de inicio</b>.</li>'+
+   '<li>Queda el ícono de INALSA como una app más.</li></ol></div>'+
+   '<div class="card"><h2>🛰️ GPS</h2><ul>'+
+   '<li>Activa Ubicación en <b>Alta precisión</b>.</li>'+
+   '<li>Permite el permiso de ubicación cuando el navegador lo pida.</li>'+
+   '<li>Al aire libre la precisión baja de 10 m.</li></ul></div>'+
+   '<div class="card"><h2>👮 Uso del oficial</h2><ol>'+
+   '<li>Inicia sesión y pulsa <b>Iniciar recorrido</b>.</li>'+
+   '<li>Camina a cada punto; la app muestra la distancia en metros.</li>'+
+   '<li>Dentro del radio permitido pulsa <b>Registrar punto</b>.</li>'+
+   '<li>Opcional: toma foto de evidencia.</li>'+
+   '<li>Al final pulsa <b>Finalizar</b>; el reporte sale por Telegram.</li></ol>'+
+   '<div class="hr"></div><p class="small mut">Los datos se guardan en este teléfono. Usa <b>Exportar respaldo</b> en Usuarios para pasarlos a otro equipo.</p></div>';
+}
+
+/* ===================== OFICIAL ===================== */
+var OFF_TABS=[['puntos','📍','Puntos'],['radar','🧭','Radar'],['mapa','🗺️','Mapa']];
+var offTab='puntos';
+function activeRound(){
+  for(var i=0;i<rounds.length;i++){ if(rounds[i].userId===ses && !rounds[i].end) return rounds[i]; }
+  return null;
+}
+function viewOficial(){
+  var u=me();
+  var r=activeRound();
+  var body='';
+  if(offTab==='puntos') body=offPuntos(r);
+  else if(offTab==='radar') body='<div class="card"><h2>Radar del recorrido</h2><p class="small mut">Tú estás en el centro y los círculos son los puntos.</p><div id="radar"></div></div>';
+  else body='<div class="card"><h2>Plano del sitio</h2>'+(mapImg?'<img class="thumb" src="'+mapImg+'">':'<p class="small mut">El administrador aún no ha cargado el plano.</p>')+'</div>';
+
+  var nav='<nav class="tabs">';
+  for(var i=0;i<OFF_TABS.length;i++){ var t=OFF_TABS[i];
+    nav+='<button class="'+(offTab===t[0]?'on':'')+'" onclick="offTab=\''+t[0]+'\';render()"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>';
+  }
+  if(u && u.role==='admin') nav+='<button onclick="backAdmin()"><span class="ic">⚙️</span>Admin</button>';
+  nav+='<button onclick="logout()"><span class="ic">🚪</span>Salir</button></nav>';
+
+  return header('Recorrido GPS')+'<div class="wrap">'+body+'</div>'+nav;
+}
+function backAdmin(){ view='admin'; tab='puntos'; render(); }
+function setOffTab(t){ offTab=t; render(); }
+
+function offPuntos(r){
+  var active=points.filter(function(p){return p.active;}).sort(function(a,b){return a.number-b.number;});
+  var done=r?r.visits.length:0, pct=active.length?Math.round(done/active.length*100):0;
+  var s='<div class="card"><div class="rowline"><div>'+
+    '<p class="small mut">Mi posición (GPS)</p>'+
+    '<div id="gpsCard">'+(pos?'<div class="mono-big" id="gpsTxt">'+fmtLL(pos.lat,pos.lng)+'</div><p class="small mut" id="gpsAcc">Precisión ±'+Math.round(pos.acc)+' m</p>':
+      '<p style="color:#fbbf24">'+(gpsErr||'Buscando señal de GPS...')+'</p>')+'</div></div>'+
+    '<span style="width:12px;height:12px;border-radius:99px;background:'+(pos?'#10b981':'#f59e0b')+'"></span></div>'+
+    '<div id="gpsBtns" class="btns">'+(pos?'<a class="btn sky" style="text-decoration:none" target="_blank" id="gmap" href="'+mapsLink(pos.lat,pos.lng)+'">Ver en Google Maps</a><button class="btn sec" onclick="copyCoord()">Copiar coordenadas</button>':'')+'</div></div>';
+
+  s+='<div class="card"><div class="rowline"><div><p class="small mut">Estado del recorrido</p>'+
+    '<b style="font-size:17px;color:'+(r?'#34d399':'#cbd5e1')+'">'+(r?'En curso':'Sin iniciar')+'</b></div>'+
+    (r?'<button class="btn dan" style="width:auto;margin:0;padding:11px 18px;font-size:13px" onclick="finishRound()">Finalizar</button>':
+       '<button class="btn" style="width:auto;margin:0;padding:11px 18px;font-size:13px" onclick="startRound()">Iniciar recorrido</button>')+'</div>'+
+    '<div class="bar"><div style="width:'+pct+'%"></div></div>'+
+    '<p class="small mut">'+done+' de '+active.length+' puntos registrados</p></div>';
+
+  if(!active.length) s+='<div class="card center"><p class="small mut">El administrador aún no ha cargado los puntos del recorrido.</p></div>';
+  for(var i=0;i<active.length;i++){
+    var p=active[i];
+    var v = r ? (function(){ for(var k=0;k<r.visits.length;k++){ if(r.visits[k].pointId===p.id) return r.visits[k]; } return null; })() : null;
+    s+='<div class="pt '+(v?'done':'')+'">'+
+      '<div class="rowline"><div><b><span class="num">'+p.number+'</span>'+esc(p.name)+'</b>'+
+      '<p class="small mut mono">'+fmtLL(p.lat,p.lng)+'</p>'+
+      (p.desc?'<p class="small mut">'+esc(p.desc)+'</p>':'')+'</div>'+
+      '<a class="btn sky" style="width:auto;margin:0;padding:9px 12px;font-size:12px;text-decoration:none" target="_blank" href="'+mapsLink(p.lat,p.lng)+'">Ir</a></div>'+
+      '<p class="small" id="d'+p.id+'">Distancia: --</p>'+
+      (v?'<p class="small" style="color:#34d399">✅ Registrado '+new Date(v.time).toLocaleTimeString('es-VE')+' · '+Math.round(v.dist)+' m</p>':'')+
+      '<input placeholder="Novedad u observación (opcional)" oninput="notes['+p.id+']=this.value">'+
+      '<div class="btns">'+
+      '<button class="btn sec" onclick="document.getElementById(\'f'+p.id+'\').click()">'+(photos[p.id]?'📷 Foto lista':'📷 Tomar foto')+'</button>'+
+      '<button class="btn '+(v?'sec':'')+'" '+(v?'disabled':'')+' onclick="register('+p.id+')">'+(v?'Registrado':'Registrar punto')+'</button></div>'+
+      '<input type="file" accept="image/*" capture="environment" id="f'+p.id+'" style="display:none" onchange="takePhoto(this,'+p.id+')"></div>';
+  }
+  return s;
+}
+function copyCoord(){
+  if(!pos) return;
+  var t=fmtLL(pos.lat,pos.lng);
+  try{ navigator.clipboard.writeText(t); }catch(e){}
+  toast('Coordenadas copiadas: '+t);
+}
+function takePhoto(input,id){
+  var f=input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    var img=new Image();
+    img.onload=function(){
+      var sc=Math.min(1,900/Math.max(img.width,img.height));
+      var c=document.createElement('canvas');
+      c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      photos[id]=c.toDataURL('image/jpeg',0.6);
+      render();
+      toast('Foto lista para el punto');
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(f);
+}
+function startRound(){
+  if(activeRound()){ toast('Ya tienes un recorrido en curso'); return; }
+  var r={id:uid(),userId:ses,start:Date.now(),end:null,visits:[],track:[]};
+  rounds.push(r); save(K.rounds,rounds);
+  var u=me();
+  tgSend('sendMessage',{parse_mode:'HTML',text:'🟢 <b>Recorrido iniciado</b>\n👮 '+esc(u.firstName+' '+u.lastName)+' (@'+esc(u.username)+')\n🕒 '+hora(Date.now())});
+  toast('Recorrido iniciado'); render();
+}
+function finishRound(){
+  var r=activeRound(); if(!r) return;
+  if(!confirm('¿Finalizar el recorrido y enviar el reporte por Telegram?')) return;
+  r.end=Date.now(); save(K.rounds,rounds);
+  var u=me(), mins=Math.round((r.end-r.start)/60000);
+  var list='';
+  var vs=r.visits.slice().sort(function(a,b){return a.number-b.number;});
+  for(var i=0;i<vs.length;i++){ list+='\n   '+vs[i].number+'. '+esc(vs[i].name); }
+  tgSend('sendMessage',{parse_mode:'HTML',text:'🔴 <b>Recorrido finalizado</b>\n👮 '+esc(u.firstName+' '+u.lastName)+' (@'+esc(u.username)+')\n🕒 Inicio: '+hora(r.start)+'\n🏁 Fin: '+hora(r.end)+'\n⏱️ Duración: '+mins+' min\n✅ Puntos: '+vs.length+list});
+  toast('Recorrido finalizado y reporte enviado'); render();
+}
+function register(id){
+  var r=activeRound();
+  if(!r){ toast('Primero inicia el recorrido',true); return; }
+  if(!pos){ toast('Aún no tengo tu ubicación GPS',true); return; }
+  var p=null; for(var i=0;i<points.length;i++){ if(points[i].id===id) p=points[i]; }
+  if(!p) return;
+  var d=distM(pos.lat,pos.lng,p.lat,p.lng);
+  if(d>p.radius){ toast('Estás a '+Math.round(d)+' m del punto #'+p.number+'. Acércate a menos de '+p.radius+' m.',true); return; }
+  for(var k=0;k<r.visits.length;k++){ if(r.visits[k].pointId===id){ toast('Este punto ya fue registrado'); return; } }
+  var note=notes[id]||'';
+  var v={pointId:p.id,number:p.number,name:p.name,lat:pos.lat,lng:pos.lng,acc:pos.acc,dist:d,note:note,photo:photos[id]||null,time:Date.now()};
+  r.visits.push(v);
+  if(r.track.length>500) r.track=r.track.slice(-500);
+  save(K.rounds,rounds);
+  var u=me();
+  tgSend('sendMessage',{parse_mode:'HTML',text:'✅ <b>Punto #'+p.number+' registrado</b>\n📍 '+esc(p.name)+'\n👮 '+esc(u.firstName+' '+u.lastName)+' (@'+esc(u.username)+')\n🕒 '+hora(Date.now())+'\n🎯 A '+Math.round(d)+' m del punto\n🧭 GPS: <code>'+fmtLL(v.lat,v.lng)+'</code>\n🗺️ '+mapsLink(p.lat,p.lng)+(note?'\n📝 '+esc(note):'')});
+  tgSend('sendLocation',{latitude:v.lat,longitude:v.lng});
+  if(v.photo) tgPhoto(v.photo,'📸 Evidencia punto #'+p.number+' - '+u.firstName+' '+u.lastName);
+  delete photos[id];
+  toast('Punto #'+p.number+' registrado y enviado ✅'); render();
+}
+
+/* ===================== ACTUALIZACIÓN EN VIVO ===================== */
+function live(){
+  if(view!=='oficial') return;
+  var r=activeRound();
+  var active=points.filter(function(p){return p.active;});
+
+  var card=document.getElementById('gpsCard');
+  if(card){
+    card.innerHTML = pos
+      ? '<div class="mono-big" id="gpsTxt">'+fmtLL(pos.lat,pos.lng)+'</div><p class="small mut" id="gpsAcc">Precisión ±'+Math.round(pos.acc)+' m · '+new Date(pos.t).toLocaleTimeString('es-VE')+'</p>'
+      : '<p style="color:#fbbf24">'+(gpsErr||'Buscando señal de GPS...')+'</p>';
+    var btns=document.getElementById('gpsBtns');
+    if(btns){
+      btns.innerHTML = pos
+        ? '<a class="btn sky" style="text-decoration:none" target="_blank" href="'+mapsLink(pos.lat,pos.lng)+'">Ver en Google Maps</a><button class="btn sec" onclick="copyCoord()">Copiar coordenadas</button>'
+        : '';
+    }
+  }
+
+  for(var i=0;i<active.length;i++){
+    var p=active[i];
+    var el=document.getElementById('d'+p.id);
+    if(!el) continue;
+    if(!pos){ el.innerHTML='<span class="mut">Distancia: sin señal GPS</span>'; continue; }
+    var d=distM(pos.lat,pos.lng,p.lat,p.lng);
+    el.innerHTML='Distancia: <b style="color:'+(d<=p.radius?'#34d399':'#fbbf24')+'">'+fmtD(d)+'</b> <span class="mut">(radio '+p.radius+' m)</span>';
+  }
+
+  if(r && pos){
+    r.track=r.track||[];
+    var last=r.track[r.track.length-1];
+    if(!last || Date.now()-last.t>15000){ r.track.push({lat:pos.lat,lng:pos.lng,t:Date.now()}); save(K.rounds,rounds); }
+  }
+
+  var rad=document.getElementById('radar');
+  if(rad) rad.innerHTML=radarSvg(active);
+}
+function radarSvg(list){
+  var S=320, cx=S/2, cy=S/2, max=60;
+  if(pos){ for(var i=0;i<list.length;i++){ var d=distM(pos.lat,pos.lng,list[i].lat,list[i].lng); if(d>max) max=d; } }
+  var sc=(S/2-24)/(max*1.15), svg='<svg width="'+S+'" height="'+S+'" style="background:#020617;border-radius:99px">';
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(S/2-4)+'" fill="none" stroke="#1e293b" stroke-width="2"/>';
+  svg+='<circle cx="'+cx+'" cy="'+cy+'" r="'+(S/4)+'" fill="none" stroke="#1e293b"/>';
+  if(pos){
+    for(var j=0;j<list.length;j++){
+      var p=list[j];
+      var dx=(p.lng-pos.lng)*111320*Math.cos(pos.lat*Math.PI/180);
+      var dy=(p.lat-pos.lat)*110540;
+      var x=cx+dx*sc, y=cy-dy*sc;
+      var dd=distM(pos.lat,pos.lng,p.lat,p.lng);
+      var done=false; var r=activeRound();
+      if(r){ for(var k=0;k<r.visits.length;k++){ if(r.visits[k].pointId===p.id) done=true; } }
+      svg+='<circle cx="'+x+'" cy="'+y+'" r="14" fill="'+(done?'#059669':'#f59e0b')+'"/>';
+      svg+='<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="#0f172a">'+p.number+'</text>';
+      svg+='<text x="'+x+'" y="'+(y+26)+'" text-anchor="middle" font-size="9" fill="#94a3b8">'+fmtD(dd)+'</text>';
+    }
+    svg+='<circle cx="'+cx+'" cy="'+cy+'" r="7" fill="#38bdf8" stroke="#0f172a" stroke-width="2"/>';
+  }else{
+    svg+='<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" fill="#94a3b8" font-size="13">Sin señal GPS</text>';
+  }
+  svg+='</svg><p class="small mut center">Escala: '+fmtD(max)+' a la orilla</p>';
+  return svg;
+}
+
+/* ===================== ARRANQUE ===================== */
+render();
+startGps();
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+</body>
+</html>
